@@ -598,6 +598,17 @@ module_param_string(table_name, table_name, sizeof(table_name), S_IRUGO);
 static unsigned int pvs_config_ver;
 module_param(pvs_config_ver, uint, S_IRUGO);
 
+#define UNDERCLOCKED_MAXFREQ_HZ	1958400000
+static bool no_cpu_underclock;
+
+static int __init get_cpu_underclock(char *unused)
+{
+	no_cpu_underclock = true;
+
+	return 0;
+}
+__setup("no_underclock", get_cpu_underclock);
+
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
 
 #define CPU_VDD_MIN	 475
@@ -792,6 +803,19 @@ static int clock_krait_8974_driver_probe(struct platform_device *pdev)
 			rows = ret;
 		}
 	}
+
+	/* Underclock to 1958MHz */
+	if (!no_cpu_underclock) {
+		while (rows--) {
+			if (freq[rows - 1] == UNDERCLOCKED_MAXFREQ_HZ)
+				break;
+			if (freq[rows - 1] < UNDERCLOCKED_MAXFREQ_HZ) {
+				rows++;
+				break;
+		}
+	}
+
+
 /* #ifdef CONFIG_VENDOR_EDIT//qcom patch, CASE ID: 01694672, Zhilong.Zhang@OnlineRd.Driver, 2014/09/19, Modify for solve the problem of Kernel NULL pointer
     krait_update_uv(uv, rows, pvs ? 50000 : 0);
 #else */
